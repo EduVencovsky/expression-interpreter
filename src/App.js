@@ -1,28 +1,31 @@
 import React, { Component } from 'react';
-import logo from './logo.svg';
 import './App.css';
+import Interpreter from './api/api'
 
 class App extends Component {
-  render() {
-    return (
-      <div className="App">
-        <header className="App-header">
-          <img src={logo} className="App-logo" alt="logo" />
-          <p>
-            Edit <code>src/App.js</code> and save to reload.
-          </p>
-          <a
-            className="App-link"
-            href="https://reactjs.org"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Learn React
-          </a>
-        </header>
-      </div>
-    );
-  }
+
+    state = {
+        string: '',
+        result: 'null',
+    }
+
+    interpret = () => {
+        let interpreter = new Interpreter(this.state.string)
+        let result = interpreter.expr()
+        this.setState({result: result})
+    }
+
+    render() {
+        return (
+            <div className="App">
+                <header className="App-header">
+                    <h1>{this.state.result}</h1>
+                    <input value={this.state.string} onChange={(e) => this.setState({string: e.target.value})}/>
+                    <button onClick={this.interpret}>Interpret</button>
+                </header>
+            </div>
+        );
+    }
 }
 
 export default App;
