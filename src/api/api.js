@@ -1,10 +1,27 @@
+/*
+GRAMMAR RULES
+
+expr   : term ((PLUS|MINUS) term)*
+
+term   : factor ((MULT|DIV) factor)*
+
+factor :  (PLUS factor) | (MINUS factor) | INTEGER | (LPAREN expr RPAREN)
+
+
+
+*/
+
 const INTEGER = 'INTEGER'
 const PLUS = 'PLUS'
 const MINUS = 'MINUS'
 const EOF = 'EOF'
+const MULT = 'MULT'
+const DIV = 'DIV'
+const LPAREN  = 'LPAREN'
+const RPAREN  = 'RPAREN'
 
 class Token {
-    constructor(type, value){
+    constructor(type, value) {
         this.type = type
         this.value = value
     }
@@ -14,17 +31,88 @@ class Token {
     }
 }
 
-export default class Interpreter {
+
+export class SimpleInterpreter {
     constructor(text) {        
-        this.text = text
-        this.position = 0
-        this.currentToken = null
-        this.currentChar = this.text[this.position]
+        this.lexer = new Lexer(text)
+        this.currentToken = this.lexer.getNextToken()
     }
 
     error() {
-        console.error('Error parsing input');
-        throw new Error('Error parsing input')
+        throw new Error(`Invalid syntax`)
+    }
+
+    eat(tokenType) {
+        if(this.currentToken.type === tokenType)
+            this.currentToken = this.lexer.getNextToken()
+        else
+            this.error()
+    }
+
+    factor() {
+        let token = this.currentToken
+
+        if(token.type === INTEGER) {
+            this.eat(INTEGER)
+            return token.value
+        }
+        else if (token.type === LPAREN) {
+            this.eat(LPAREN)
+            let result = this.expr()            
+            this.eat(RPAREN)
+            return result 
+        }
+
+        this.error()
+    }
+
+    term() {
+        let result = this.factor()
+
+        while([MULT, DIV].includes(this.currentToken.type)) {
+            let token = this.currentToken
+            if (token.type === MULT) {
+                this.eat(MULT)
+                result = result * this.factor()
+            }
+            else if (token.type === DIV) {
+                this.eat(DIV)
+                result = result / this.factor()
+            }
+        }
+
+        return result
+    }
+
+    expr() {
+        // debugger
+        let result = this.term()
+
+        while([PLUS, MINUS].includes(this.currentToken.type)) {
+            let token = this.currentToken
+            if (token.type === PLUS) {
+                this.eat(PLUS)
+                result = result + this.term()
+            }
+            else if (token.type === MINUS) {
+                this.eat(MINUS)
+                result = result - this.term()
+            }
+        }
+        console.log('token', this.currentToken.type)
+        return result
+    }
+}
+
+class Lexer {
+    constructor(text) {
+        this.text = text
+        this.position = 0
+        this.currentChar = this.text[this.position]
+    }
+    
+    error(char) {
+        throw new Error(`Invalid character ${char} at position ${this.position}`)
     }
 
     advance() { 
@@ -44,6 +132,14 @@ export default class Interpreter {
             this.advance()
         }
         return(Number(result))
+    }
+
+    peek() {
+        let peekPos = this.position + 1
+        if (peekPos > this.text.length - 1) 
+            return null
+        else 
+            return this.text[peekPos]
     }
 
     getNextToken() {
@@ -72,41 +168,199 @@ export default class Interpreter {
                 token = new Token(MINUS, '-')
                 console.log(token)
                 return token
+            }  
+            else if (this.currentChar === '*') {
+                this.advance()
+                token = new Token(MULT, '*')
+                console.log(token)
+                return token
+            }            
+            else if (this.currentChar === '/') {
+                this.advance()
+                token = new Token(DIV, '/')
+                console.log(token)
+                return token
+            } 
+            else if (this.currentChar === '(') {
+                this.advance()
+                token = new Token(LPAREN, '(')
+                console.log(token)
+                return token
+            }            
+            else if (this.currentChar === ')') {
+                this.advance()
+                token = new Token(RPAREN, ')')
+                console.log(token)
+                return token
             }            
 
-            this.error()
+            this.error(this.currentChar)
         }
 
         return new Token(EOF, null)
 
     }
 
+}
+
+class BinOpNode {
+    constructor(left, op, right){
+        this.left = left
+        this.token = op
+        this.op = op
+        this.right = right
+    }
+
+    toString() {
+        return `left ${this.left} op ${this.left} right ${this.left}`
+    }
+}
+
+class Integer {
+    constructor(token){
+        this.token = token
+        this.value = token.value
+    }
+}
+
+class UnaryOp {
+    constructor(op, expr){
+        this.token = op
+        this.op = op
+        this.expr = expr
+    }
+}
+
+export class Parser {
+    constructor(text) {
+        this.lexer = new Lexer(text)
+        this.currentToken = this.lexer.getNextToken()
+    }
+
+    error() {
+        throw new Error(`Invalid syntax`)
+    }
+
     eat(tokenType) {
         if(this.currentToken.type === tokenType)
-            this.currentToken = this.getNextToken()
+            this.currentToken = this.lexer.getNextToken()
         else
             this.error()
     }
 
+    factor() {
+        let token = this.currentToken
+
+        if (token.type === PLUS) {
+            this.eat(PLUS)
+            return new UnaryOp(token, this.factor())
+        }
+        else if (token.type === MINUS) {
+            this.eat(MINUS)
+            return new UnaryOp(token, this.factor())
+        }
+        else if (token.type === INTEGER) {
+            this.eat(INTEGER)
+            return new Integer(token)
+        }
+        else if (token.type === LPAREN) {
+            this.eat(LPAREN)
+            let node = this.expr()            
+            this.eat(RPAREN)
+            return node 
+        }
+
+        this.error()
+    }
+
+    term() {
+        let node = this.factor()
+
+        while([MULT, DIV].includes(this.currentToken.type)) {
+            let token = this.currentToken
+            if (token.type === MULT) {
+                this.eat(MULT)
+            }
+            else if (token.type === DIV) {
+                this.eat(DIV)
+            }
+
+            node = new BinOpNode(node, token, this.factor())
+        }
+
+        return node
+    }
+
     expr() {
         // debugger
-        this.currentToken = this.getNextToken()
+        let node = this.term()
 
-        let left = this.currentToken
-        this.eat(INTEGER)
+        while([PLUS, MINUS].includes(this.currentToken.type)) {
+            let token = this.currentToken
+            if (token.type === PLUS) {
+                this.eat(PLUS)
+            }
+            else if (token.type === MINUS) {
+                this.eat(MINUS)
+            }
+            node = new BinOpNode(node, token, this.term())
+        }
 
-        let op = this.currentToken
-        if (op.type === PLUS)
-            this.eat(PLUS)
-        else
-            this.eat(MINUS)
+        return node
+    }
 
-        let right = this.currentToken
-        this.eat(INTEGER)
+    parse() {
+        return this.expr()
+    }
+}
 
-        if (op.type == PLUS)
-            return left.value + right.value
-        else 
-            return left.value - right.value
+export default class Interpreter {
+    constructor(text){
+        this.parser = new Parser(text)
+    }
+
+    visit(node) {
+        const methodName = `visit${ node.constructor.name }`;
+        const visitor = this[methodName] || this.genericVisit;
+        return visitor.call(this, node)
+    }
+
+    genericVisit(node){
+        throw new Error(`No visit${node.constructor.name} method`)
+    }
+
+    visitBinOpNode(node){ 
+        if(node.op.type === PLUS){
+            return this.visit(node.left) + this.visit(node.right)
+        }
+        else if(node.op.type === MINUS){
+            return this.visit(node.left) - this.visit(node.right)
+        }
+        else if(node.op.type === MULT){
+            return this.visit(node.left) * this.visit(node.right)
+        }
+        else if(node.op.type === DIV){
+            return this.visit(node.left) / this.visit(node.right)
+        }
+    }
+
+    visitInteger(node){
+        return node.value
+    }
+
+    visitUnaryOp(node){
+        let opType = node.op.type
+        if(opType === PLUS){
+            return +this.visit(node.expr)
+        }
+        else if(opType === MINUS){
+            return -this.visit(node.expr)
+        }
+    }
+
+    interpret() {
+        let tree = this.parser.parse()
+        console.log('TREE', tree)
+        return this.visit(tree)
     }
 }

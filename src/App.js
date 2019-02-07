@@ -11,7 +11,8 @@ class App extends Component {
 
     interpret = () => {
         let interpreter = new Interpreter(this.state.string)
-        let result = interpreter.expr()
+        let result = interpreter.interpret()
+        console.log('res', result)
         this.setState({result: result})
     }
 
