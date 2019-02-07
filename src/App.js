@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import './App.css';
-import Interpreter from './api/api'
+import Interpreter, { ExpressionsInterpreter } from './api/api'
 
 class App extends Component {
 
@@ -10,10 +10,10 @@ class App extends Component {
     }
 
     interpret = () => {
-        let interpreter = new Interpreter(this.state.string)
+        let interpreter = new ExpressionsInterpreter(this.state.string)
         let result = interpreter.interpret()
         console.log('res', result)
-        this.setState({result: result})
+        this.setState({result: result.toString()})
     }
 
     render() {
