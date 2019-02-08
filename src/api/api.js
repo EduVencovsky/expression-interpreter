@@ -1,5 +1,6 @@
 //-----------------------GRAMMAR RULES-----------------------//
-/*
+
+/* Integer Parser (Calculator)
 
 expr       : term ((PLUS|MINUS) term)*
 
@@ -9,7 +10,7 @@ factor     : (PLUS factor) | (MINUS factor) | INTEGER | (LPAREN expr RPAREN)
 
 */
 
-/*
+/* Chars Parser (String Comparator)
 
 expr      : term ((AND|OR) term)*
 
@@ -19,7 +20,7 @@ factor    : CHARS | (LPAREN expr RPAREN)
 
 */
 
-/*
+/* Expression Parser (Integer and Chars Comparetor)
 
 expr      : term ((AND|OR) term)*
 
@@ -31,7 +32,7 @@ exprInt   : term ((PLUS|MINUS) term)*
 
 termInt   : factor ((MULT|DIV) factor)*
 
-factorInt : (PLUS factor) | (MINUS factor) | INTEGER | (LPAREN expr RPAREN)
+factorInt : (PLUS factorInt) | (MINUS factorInt) | INTEGER | (LPAREN exprInt RPAREN)
 
 
 */
@@ -616,7 +617,6 @@ export class ExpressionsInterpreterChars {
     }
 }
 
-
 export class ExpressionsParser {
     constructor(text) {
         this.lexer = new Lexer(text)
@@ -690,16 +690,8 @@ export class ExpressionsParser {
             return new Chars(token)
         }
         else if (token.type === LPAREN) {
-            debugger
             this.eat(LPAREN)
-            let node = null
-            let nextToken = this.currentToken
-            if (nextToken.type === CHARS){
-                node = this.expr()   
-            }
-            else if (nextToken.type === INTEGER){
-                node = this.exprInt()   
-            }
+            let node = this.expr()   
             this.eat(RPAREN)
             return node 
         }
@@ -712,14 +704,7 @@ export class ExpressionsParser {
             return new UnaryOp(token, this.factorInt())
         }
         else if (token.type === INTEGER) {
-            this.eat(INTEGER)
-            return new Integer(token)
-        }
-        else if (token.type === LPAREN) {
-            this.eat(LPAREN)
-            let node = this.exprInt()            
-            this.eat(RPAREN)
-            return node 
+            return this.exprInt() 
         }
 
         this.error()
@@ -783,7 +768,7 @@ export class ExpressionsParser {
             this.eat(RPAREN)
             return node 
         }
-
+        
         this.error()
     }
     
@@ -833,6 +818,18 @@ export class ExpressionsInterpreter {
         }
         else if(node.op.type === DIF){
             return this.visit(node.left) != this.visit(node.right)
+        }
+        else if(node.op.type === PLUS){
+            return this.visit(node.left) + this.visit(node.right)
+        }
+        else if(node.op.type === MINUS){
+            return this.visit(node.left) - this.visit(node.right)
+        }
+        else if(node.op.type === MULT){
+            return this.visit(node.left) * this.visit(node.right)
+        }
+        else if(node.op.type === DIV){
+            return this.visit(node.left) / this.visit(node.right)
         }
     }
 
