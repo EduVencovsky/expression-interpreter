@@ -1,12 +1,12 @@
 //-----------------------GRAMMAR RULES-----------------------//
 
-/* Integer Parser (Calculator)
+/* Num Parser (Calculator)
 
 expr       : term ((PLUS|MINUS) term)*
 
 term       : factor ((MULT|DIV) factor)*
 
-factor     : (PLUS factor) | (MINUS factor) | INTEGER | (LPAREN expr RPAREN)
+factor     : (PLUS factor) | (MINUS factor) | NUM | (LPAREN expr RPAREN)
 
 */
 
@@ -20,38 +20,35 @@ factor    : CHARS | (LPAREN expr RPAREN)
 
 */
 
-/* Expression Parser (Integer and Chars Comparetor)
+/* Expression Parser (Num and Chars Comparator)
 
-expr      : term ((AND|OR) term)*
+expr           : comparison ((AND|OR) comparison)*
 
-term      : factor ((BIG|BIGEQ|SML|SMLEQ|EQ|DIF) factor)*
+comparison     : addition ((BIG|BIGEQ|SML|SMLEQ|EQ|DIF) addition)*
 
-factor    : CHARS | (LPAREN expr RPAREN) | exprInt
+addition       : multiplication ((PLUS|MINUS) multiplication)*
 
-exprInt   : term ((PLUS|MINUS) term)*
+multiplication : unary ((PLUS|MINUS) unary)*
 
-termInt   : factor ((MULT|DIV) factor)*
-
-factorInt : (PLUS factorInt) | (MINUS factorInt) | INTEGER | (LPAREN exprInt RPAREN)
-
+unary          : (PLUS unary) | (MINUS unary) | NUM | CHARS | (LPAREN exprInt RPAREN)
 
 */
 
-const INTEGER = 'INTEGER'
+const NUM = 'NUM'
 const PLUS = 'PLUS'
 const MINUS = 'MINUS'
 const EOF = 'EOF'
 const MULT = 'MULT'
 const DIV = 'DIV'
-const LPAREN  = 'LPAREN'
-const RPAREN  = 'RPAREN'
+const LPAREN = 'LPAREN'
+const RPAREN = 'RPAREN'
 const DIF = 'DIF'
 const BIG = 'BIG'
 const BIGEQ = 'BIGEQ'
 const SML = 'SML'
 const SMLEQ = 'SMLEQ'
 const EQ = 'EQ'
-const CHARS = 'CHARS' // It's a string
+const CHARS = 'CHARS'
 const AND = 'AND'
 const OR = 'OR'
 
@@ -67,7 +64,7 @@ class Token {
 }
 
 export class SimpleInterpreter {
-    constructor(text) {        
+    constructor(text) {
         this.lexer = new Lexer(text)
         this.currentToken = this.lexer.getNextToken()
     }
@@ -77,24 +74,26 @@ export class SimpleInterpreter {
     }
 
     eat(tokenType) {
-        if(this.currentToken.type === tokenType)
+        if (this.currentToken.type === tokenType){
             this.currentToken = this.lexer.getNextToken()
-        else
+        }
+        else{
             this.error()
+        }
     }
 
     factor() {
         let token = this.currentToken
 
-        if(token.type === INTEGER) {
-            this.eat(INTEGER)
+        if (token.type === NUM) {
+            this.eat(NUM)
             return token.value
         }
         else if (token.type === LPAREN) {
             this.eat(LPAREN)
-            let result = this.expr()            
+            let result = this.expr()
             this.eat(RPAREN)
-            return result 
+            return result
         }
 
         this.error()
@@ -103,7 +102,7 @@ export class SimpleInterpreter {
     term() {
         let result = this.factor()
 
-        while([MULT, DIV].includes(this.currentToken.type)) {
+        while ([MULT, DIV].includes(this.currentToken.type)) {
             let token = this.currentToken
             if (token.type === MULT) {
                 this.eat(MULT)
@@ -122,7 +121,7 @@ export class SimpleInterpreter {
         // debugger
         let result = this.term()
 
-        while([PLUS, MINUS].includes(this.currentToken.type)) {
+        while ([PLUS, MINUS].includes(this.currentToken.type)) {
             let token = this.currentToken
             if (token.type === PLUS) {
                 this.eat(PLUS)
@@ -144,12 +143,12 @@ class Lexer {
         this.position = 0
         this.currentChar = this.text[this.position]
     }
-    
+
     error(char) {
-        throw new Error(`Invalid character ${char} at position ${this.position}`)
+        throw new Error(`Invalid character "${char}" at position ${this.position}`)
     }
 
-    advance() { 
+    advance() {
         this.position++
         this.currentChar = this.position > this.text.length - 1 ? null : this.text[this.position]
     }
@@ -159,32 +158,40 @@ class Lexer {
             this.advance()
     }
 
-    integer() {
+    num() {
         let result = ''
-        while (this.currentChar != null && !isNaN(this.currentChar)) {
-            result += this.currentChar
-            this.advance()
+        let havePoint = false
+        while (this.currentChar != null) {
+            if(!isNaN(this.currentChar)) {
+                result += this.currentChar
+                this.advance()
+            }
+            else if(!havePoint && this.currentChar === '.' && !isNaN(this.peek())) {
+                result += this.currentChar
+                havePoint = true
+                this.advance()
+            }
+            else {
+                break
+            }
         }
-        return(Number(result))
+        return Number(result)
     }
 
-    chars(quotes) {
+    chars(quotes = '"') {
         let result = ''
-        this.advance() // jumps "
+        this.advance()
         while (this.currentChar != null && this.currentChar !== quotes) {
             result += this.currentChar
             this.advance()
         }
-        this.advance() // jumps "
-        return(String(result))
+        this.advance()
+        return String(result)
     }
 
     peek(count = 1) {
         let peekPos = this.position + count
-        if (peekPos > this.text.length - 1) 
-            return null
-        else 
-            return this.text[peekPos]
+        return peekPos > this.text.length - 1 ? null : this.text[peekPos]
     }
 
     getNextToken() {
@@ -199,104 +206,86 @@ class Lexer {
             }
             else if (this.currentChar === '"') {
                 token = new Token(CHARS, this.chars('"'))
-                console.log(token)
                 return token
             }
             else if (!isNaN(this.currentChar)) {
-                token = new Token(INTEGER, this.integer())
-                console.log(token)
+                token = new Token(NUM, this.num())
                 return token
             }
             else if (this.currentChar === '+') {
                 this.advance()
                 token = new Token(PLUS, '+')
-                console.log(token)
                 return token
-            }            
+            }
             else if (this.currentChar === '-') {
                 this.advance()
                 token = new Token(MINUS, '-')
-                console.log(token)
                 return token
-            }  
+            }
             else if (this.currentChar === '*') {
                 this.advance()
                 token = new Token(MULT, '*')
-                console.log(token)
                 return token
-            }            
+            }
             else if (this.currentChar === '/') {
                 this.advance()
                 token = new Token(DIV, '/')
-                console.log(token)
                 return token
-            } 
+            }
             else if (this.currentChar === '(') {
                 this.advance()
                 token = new Token(LPAREN, '(')
-                console.log(token)
                 return token
-            }            
+            }
             else if (this.currentChar === ')') {
                 this.advance()
                 token = new Token(RPAREN, ')')
-                console.log(token)
                 return token
-            } 
+            }
             else if (this.currentChar === '&' && this.peek() === '&') {
                 this.advance()
                 this.advance()
                 token = new Token(AND, '&&')
-                console.log(token)
                 return token
-            } 
+            }
             else if (this.currentChar === '|' && this.peek() === '|') {
                 this.advance()
                 this.advance()
                 token = new Token(OR, '||')
-                console.log(token)
                 return token
-            } 
+            }
             else if (this.currentChar === '>') {
                 this.advance()
-                token = new Token(BIG, '>')
-                console.log(token)
+                if (this.currentChar === '=') {
+                    this.advance()
+                    token = new Token(BIGEQ, '>=')
+                } else {
+                    token = new Token(BIG, '>')
+                }
                 return token
-            } 
-            else if (this.currentChar === '>' && this.peek() === '=') {
-                this.advance()
-                this.advance()
-                token = new Token(BIGEQ, '>=')
-                console.log(token)
-                return token
-            } 
+            }
             else if (this.currentChar === '<') {
                 this.advance()
-                token = new Token(SML, '<')
-                console.log(token)
+                if (this.currentChar === '=') {
+                    this.advance()
+                    token = new Token(SMLEQ, '<=')
+                } else {
+                    token = new Token(SML, '<')
+                }
                 return token
-            } 
-            else if (this.currentChar === '<' && this.peek() === '=') {
-                this.advance()
-                this.advance()
-                token = new Token(SMLEQ, '<=')
-                console.log(token)
-                return token
-            } 
+            }
             else if (this.currentChar === '=' && this.peek() === '=') {
                 this.advance()
                 this.advance()
                 token = new Token(EQ, '==')
-                console.log(token)
                 return token
-            } 
+            }
             else if (this.currentChar === '!' && this.peek() === '=') {
                 this.advance()
                 this.advance()
                 token = new Token(DIF, '!=')
-                console.log(token)
                 return token
-            }             
+            }
 
             this.error(this.currentChar)
         }
@@ -308,7 +297,7 @@ class Lexer {
 }
 
 class BinOpNode {
-    constructor(left, op, right){
+    constructor(left, op, right) {
         this.left = left
         this.token = op
         this.op = op
@@ -320,50 +309,50 @@ class BinOpNode {
     }
 }
 
-class Integer {
-    constructor(token){
+class Num {
+    constructor(token) {
         this.token = token
         this.value = token.value
     }
-}   
+}
 
 class Chars {
-    constructor(token){
+    constructor(token) {
         this.token = token
         this.value = token.value
     }
 }
 
 class UnaryOp {
-    constructor(op, expr){
+    constructor(op, expr) {
         this.token = op
         this.op = op
         this.expr = expr
     }
 }
 
-export class ParserInt {
+export class CalculatorParser {
     constructor(text) {
         this.lexer = new Lexer(text)
         this.currentToken = this.lexer.getNextToken()
     }
 
     error() {
-        throw new Error(`Invalid syntax`)
+        this.lexer.error()
     }
 
     eat(tokenType) {
-        if(this.currentToken.type === tokenType)
+        if (this.currentToken.type === tokenType){
             this.currentToken = this.lexer.getNextToken()
-        else
+        }
+        else{
             this.error()
+        }
     }
 
     expr() {
-        // debugger
         let node = this.term()
-
-        while([PLUS, MINUS].includes(this.currentToken.type)) {
+        while ([PLUS, MINUS].includes(this.currentToken.type)) {
             let token = this.currentToken
             if (token.type === PLUS) {
                 this.eat(PLUS)
@@ -373,14 +362,12 @@ export class ParserInt {
             }
             node = new BinOpNode(node, token, this.term())
         }
-
         return node
     }
 
     term() {
         let node = this.factor()
-
-        while([MULT, DIV].includes(this.currentToken.type)) {
+        while ([MULT, DIV].includes(this.currentToken.type)) {
             let token = this.currentToken
             if (token.type === MULT) {
                 this.eat(MULT)
@@ -388,16 +375,13 @@ export class ParserInt {
             else if (token.type === DIV) {
                 this.eat(DIV)
             }
-
             node = new BinOpNode(node, token, this.factor())
         }
-
         return node
     }
 
     factor() {
         let token = this.currentToken
-
         if (token.type === PLUS) {
             this.eat(PLUS)
             return new UnaryOp(token, this.factor())
@@ -406,17 +390,16 @@ export class ParserInt {
             this.eat(MINUS)
             return new UnaryOp(token, this.factor())
         }
-        else if (token.type === INTEGER) {
-            this.eat(INTEGER)
-            return new Integer(token)
+        else if (token.type === NUM) {
+            this.eat(NUM)
+            return new Num(token)
         }
         else if (token.type === LPAREN) {
             this.eat(LPAREN)
-            let node = this.expr()            
+            let node = this.expr()
             this.eat(RPAREN)
-            return node 
+            return node
         }
-
         this.error()
     }
 
@@ -425,79 +408,78 @@ export class ParserInt {
     }
 }
 
-export class InterpreterInt {
-    constructor(text){
-        this.parser = new ParserInt(text)
-    }
+export class Calculator {
 
     visit(node) {
-        const methodName = `visit${ node.constructor.name }`;
+        const methodName = `visit${node.constructor.name}`;
         const visitor = this[methodName] || this.genericVisit;
         return visitor.call(this, node)
     }
 
-    genericVisit(node){
-        throw new Error(`No visit${node.constructor.name} method`)
+    genericVisit(node) {
+        throw new Error(`No ${node.constructor.name} method`)
     }
 
-    visitBinOpNode(node){ 
-        if(node.op.type === PLUS){
+    visitBinOpNode(node) {
+        if (node.op.type === PLUS) {
             return this.visit(node.left) + this.visit(node.right)
         }
-        else if(node.op.type === MINUS){
+        else if (node.op.type === MINUS) {
             return this.visit(node.left) - this.visit(node.right)
         }
-        else if(node.op.type === MULT){
+        else if (node.op.type === MULT) {
             return this.visit(node.left) * this.visit(node.right)
         }
-        else if(node.op.type === DIV){
+        else if (node.op.type === DIV) {
             return this.visit(node.left) / this.visit(node.right)
         }
+        this.parser.error()
     }
 
-    visitInteger(node){
+    visitNum(node) {
         return node.value
     }
 
-    visitUnaryOp(node){
+    visitUnaryOp(node) {
         let opType = node.op.type
-        if(opType === PLUS){
+        if (opType === PLUS) {
             return +this.visit(node.expr)
         }
-        else if(opType === MINUS){
+        else if (opType === MINUS) {
             return -this.visit(node.expr)
         }
+        this.parser.error()
     }
 
-    interpret() {
+    eval(text) {
+        this.parser = new CalculatorParser(text)
         let tree = this.parser.parse()
-        console.log('TREE', tree)
         return this.visit(tree)
     }
 }
 
-export class ExpressionsParserChars {
+export class StringComparatorParser {
     constructor(text) {
         this.lexer = new Lexer(text)
         this.currentToken = this.lexer.getNextToken()
     }
 
     error() {
-        throw new Error(`Invalid syntax`)
+        this.lexer.error()
     }
 
     eat(tokenType) {
-        if(this.currentToken.type === tokenType)
+        if (this.currentToken.type === tokenType){
             this.currentToken = this.lexer.getNextToken()
-        else
+        }
+        else{
             this.error()
+        }
     }
 
     expr() {
-        // debugger
         let node = this.term()
-
-        while([AND, OR].includes(this.currentToken.type)) {
+        while ([AND, OR].includes(this.currentToken.type)) {
             let token = this.currentToken
             if (token.type === AND) {
                 this.eat(AND)
@@ -507,14 +489,12 @@ export class ExpressionsParserChars {
             }
             node = new BinOpNode(node, token, this.term())
         }
-
         return node
     }
 
     term() {
         let node = this.factor()
-
-        while([BIG, BIGEQ, SML, SMLEQ, EQ, DIF].includes(this.currentToken.type)) {
+        while ([BIG, BIGEQ, SML, SMLEQ, EQ, DIF].includes(this.currentToken.type)) {
             let token = this.currentToken
             if (token.type === BIG) {
                 this.eat(BIG)
@@ -536,25 +516,21 @@ export class ExpressionsParserChars {
             }
             node = new BinOpNode(node, token, this.factor())
         }
-
         return node
-
     }
 
     factor() {
         let token = this.currentToken
-
         if (token.type === CHARS) {
             this.eat(CHARS)
             return new Chars(token)
         }
         else if (token.type === LPAREN) {
             this.eat(LPAREN)
-            let node = this.expr()            
+            let node = this.expr()
             this.eat(RPAREN)
-            return node 
+            return node
         }
-
         this.error()
     }
 
@@ -564,55 +540,57 @@ export class ExpressionsParserChars {
 
 }
 
-export class ExpressionsInterpreterChars {
-    constructor(text){
-        this.parser = new ExpressionsParserChars(text)
+export class StringComparator {
+
+    error(){
+        this.parser.error()
     }
 
     visit(node) {
-        const methodName = `visit${ node.constructor.name }`;
+        const methodName = `visit${node.constructor.name}`;
         const visitor = this[methodName] || this.genericVisit;
         return visitor.call(this, node)
     }
 
-    genericVisit(node){
-        throw new Error(`No visit${node.constructor.name} method`)
+    genericVisit(node) {
+        throw new Error(`No ${node.constructor.name} method`)
     }
 
-    visitBinOpNode(node){ 
-        if(node.op.type === AND){
+    visitBinOpNode(node) {
+        if (node.op.type === AND) {
             return this.visit(node.left) && this.visit(node.right)
         }
-        else if(node.op.type === OR){
+        else if (node.op.type === OR) {
             return this.visit(node.left) || this.visit(node.right)
         }
-        else if(node.op.type === BIG){
+        else if (node.op.type === BIG) {
             return this.visit(node.left) > this.visit(node.right)
         }
-        else if(node.op.type === BIGEQ){
+        else if (node.op.type === BIGEQ) {
             return this.visit(node.left) >= this.visit(node.right)
         }
-        else if(node.op.type === SML){
+        else if (node.op.type === SML) {
             return this.visit(node.left) < this.visit(node.right)
         }
-        else if(node.op.type === SMLEQ){
+        else if (node.op.type === SMLEQ) {
             return this.visit(node.left) <= this.visit(node.right)
         }
-        else if(node.op.type === EQ){
+        else if (node.op.type === EQ) {
             return this.visit(node.left) == this.visit(node.right)
         }
-        else if(node.op.type === DIF){
+        else if (node.op.type === DIF) {
             return this.visit(node.left) != this.visit(node.right)
         }
+        this.error()
     }
 
-    visitChars(node){
+    visitChars(node) {
         return node.value
     }
 
-    interpret() {
+    eval(text) {
+        this.parser = new StringComparatorParser(text)
         let tree = this.parser.parse()
-        console.log('TREE', tree)
         return this.visit(tree)
     }
 }
@@ -624,21 +602,25 @@ export class ExpressionsParser {
     }
 
     error() {
-        throw new Error(`Invalid syntax`)
+        this.lexer.error()
     }
 
     eat(tokenType) {
-        if(this.currentToken.type === tokenType)
+        if (this.currentToken.type === tokenType){
             this.currentToken = this.lexer.getNextToken()
-        else
+        }
+        else{
             this.error()
+        }
     }
 
-    expr() {
-        // debugger
-        let node = this.term()
+    parse(){
+        return this.expr()
+    }
 
-        while([AND, OR].includes(this.currentToken.type)) {
+    expr(){
+        let node = this.comparison()
+        while ([AND, OR].includes(this.currentToken.type)) {
             let token = this.currentToken
             if (token.type === AND) {
                 this.eat(AND)
@@ -646,16 +628,14 @@ export class ExpressionsParser {
             else if (token.type === OR) {
                 this.eat(OR)
             }
-            node = new BinOpNode(node, token, this.term())
+            node = new BinOpNode(node, token, this.comparison())
         }
-
         return node
     }
 
-    term() {
-        let node = this.factor()
-
-        while([BIG, BIGEQ, SML, SMLEQ, EQ, DIF].includes(this.currentToken.type)) {
+    comparison(){
+        let node = this.addition()
+        while ([BIG, BIGEQ, SML, SMLEQ, EQ, DIF].includes(this.currentToken.type)) {
             let token = this.currentToken
             if (token.type === BIG) {
                 this.eat(BIG)
@@ -675,47 +655,14 @@ export class ExpressionsParser {
             else if (token.type === DIF) {
                 this.eat(DIF)
             }
-            node = new BinOpNode(node, token, this.factor())
+            node = new BinOpNode(node, token, this.addition())
         }
-
         return node
-
     }
 
-    factor() {
-        let token = this.currentToken
-
-        if (token.type === CHARS) {
-            this.eat(CHARS)
-            return new Chars(token)
-        }
-        else if (token.type === LPAREN) {
-            this.eat(LPAREN)
-            let node = this.expr()   
-            this.eat(RPAREN)
-            return node 
-        }
-        else if (token.type === PLUS) {
-            this.eat(PLUS)
-            return new UnaryOp(token, this.factorInt())
-        }
-        else if (token.type === MINUS) {
-            this.eat(MINUS)
-            return new UnaryOp(token, this.factorInt())
-        }
-        else if (token.type === INTEGER) {
-            return this.exprInt() 
-        }
-
-        this.error()
-    }
-
-    
-    exprInt() {
-        // debugger
-        let node = this.termInt()
-
-        while([PLUS, MINUS].includes(this.currentToken.type)) {
+    addition(){
+        let node = this.multiplication()
+        while ([PLUS, MINUS].includes(this.currentToken.type)) {
             let token = this.currentToken
             if (token.type === PLUS) {
                 this.eat(PLUS)
@@ -723,16 +670,14 @@ export class ExpressionsParser {
             else if (token.type === MINUS) {
                 this.eat(MINUS)
             }
-            node = new BinOpNode(node, token, this.termInt())
+            node = new BinOpNode(node, token, this.multiplication())
         }
-
         return node
     }
 
-    termInt() {
-        let node = this.factorInt()
-
-        while([MULT, DIV].includes(this.currentToken.type)) {
+    multiplication(){
+        let node = this.unary()
+        while ([MULT, DIV].includes(this.currentToken.type)) {
             let token = this.currentToken
             if (token.type === MULT) {
                 this.eat(MULT)
@@ -740,120 +685,114 @@ export class ExpressionsParser {
             else if (token.type === DIV) {
                 this.eat(DIV)
             }
-
-            node = new BinOpNode(node, token, this.factorInt())
+            node = new BinOpNode(node, token, this.unary())
         }
-
         return node
     }
 
-    factorInt() {
+    unary(){
         let token = this.currentToken
-
         if (token.type === PLUS) {
             this.eat(PLUS)
-            return new UnaryOp(token, this.factorInt())
+            return new UnaryOp(token, this.unary())
         }
         else if (token.type === MINUS) {
             this.eat(MINUS)
-            return new UnaryOp(token, this.factorInt())
+            return new UnaryOp(token, this.unary())
         }
-        else if (token.type === INTEGER) {
-            this.eat(INTEGER)
-            return new Integer(token)
+        else if (token.type === NUM) {
+            this.eat(NUM)
+            return new Num(token)
+        }
+        else if (token.type === CHARS) {
+            this.eat(CHARS)
+            return new Chars(token)
         }
         else if (token.type === LPAREN) {
             this.eat(LPAREN)
-            let node = this.exprInt()            
+            let node = this.expr()
             this.eat(RPAREN)
-            return node 
+            return node
         }
-        
         this.error()
-    }
-    
-
-    parse() {
-        return this.expr()
     }
 
 }
 
 export class ExpressionsInterpreter {
-    constructor(text){
-        this.parser = new ExpressionsParser(text)
-    }
 
     visit(node) {
-        const methodName = `visit${ node.constructor.name }`;
+        const methodName = `visit${node.constructor.name}`;
         const visitor = this[methodName] || this.genericVisit;
         return visitor.call(this, node)
     }
 
-    genericVisit(node){
-        throw new Error(`No visit${node.constructor.name} method`)
+    genericVisit(node) {
+        throw new Error(`No ${node.constructor.name} method`)
     }
 
-    visitBinOpNode(node){ 
-        if(node.op.type === AND){
+    visitBinOpNode(node) {
+        if (node.op.type === AND) {
             return this.visit(node.left) && this.visit(node.right)
         }
-        else if(node.op.type === OR){
+        else if (node.op.type === OR) {
             return this.visit(node.left) || this.visit(node.right)
         }
-        else if(node.op.type === BIG){
+        else if (node.op.type === BIG) {
             return this.visit(node.left) > this.visit(node.right)
         }
-        else if(node.op.type === BIGEQ){
+        else if (node.op.type === BIGEQ) {
             return this.visit(node.left) >= this.visit(node.right)
         }
-        else if(node.op.type === SML){
+        else if (node.op.type === SML) {
             return this.visit(node.left) < this.visit(node.right)
         }
-        else if(node.op.type === SMLEQ){
+        else if (node.op.type === SMLEQ) {
             return this.visit(node.left) <= this.visit(node.right)
         }
-        else if(node.op.type === EQ){
+        else if (node.op.type === EQ) {
             return this.visit(node.left) == this.visit(node.right)
         }
-        else if(node.op.type === DIF){
+        else if (node.op.type === DIF) {
             return this.visit(node.left) != this.visit(node.right)
         }
-        else if(node.op.type === PLUS){
+        else if (node.op.type === PLUS) {
             return this.visit(node.left) + this.visit(node.right)
         }
-        else if(node.op.type === MINUS){
+        else if (node.op.type === MINUS) {
             return this.visit(node.left) - this.visit(node.right)
         }
-        else if(node.op.type === MULT){
+        else if (node.op.type === MULT) {
             return this.visit(node.left) * this.visit(node.right)
         }
-        else if(node.op.type === DIV){
+        else if (node.op.type === DIV) {
             return this.visit(node.left) / this.visit(node.right)
         }
+        this.parser.error()
     }
 
-    visitChars(node){
+    visitChars(node) {
         return node.value
     }
 
-    visitInteger(node){
+    visitNum(node) {
         return node.value
     }
 
-    visitUnaryOp(node){
+    visitUnaryOp(node) {
         let opType = node.op.type
-        if(opType === PLUS){
+        if (opType === PLUS) {
             return +this.visit(node.expr)
         }
-        else if(opType === MINUS){
+        else if (opType === MINUS) {
             return -this.visit(node.expr)
         }
+        this.parser.error()
     }
 
-    interpret() {
+    eval(text) {
+        this.parser = new ExpressionsParser(text)
         let tree = this.parser.parse()
-        console.log('TREE', tree)
         return this.visit(tree)
     }
 }
