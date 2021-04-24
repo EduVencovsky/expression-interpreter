@@ -152,7 +152,7 @@ export class SimpleInterpreter {
 
 class Lexer {
     position: number
-    currentChar: string
+    currentChar: string | null
     text: string
     
     constructor(text: string) {        

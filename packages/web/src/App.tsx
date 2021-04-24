@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import './App.css'
 import { Calculator, StringComparator, ExpressionsInterpreter } from '@expression-interpreter/core'
 
 class App extends Component {
@@ -11,25 +12,25 @@ class App extends Component {
     }
 
     classes = {
-        Calculator, 
-        StringComparator, 
-        ExpressionsInterpreter
+        'Calculator': Calculator, 
+        'StringComparator': StringComparator, 
+        'ExpressionsInterpreter': ExpressionsInterpreter
     }
 
     interpret = () => {
         let result = ''
         try {
-            result = this.state.interpreter.eval(this.state.string)
+            result = this.state.interpreter.eval(this.state.string) as any
         } catch (error) {
             result = error
         }
         this.setState({result: result.toString()})            
     }
 
-    handleOptionChange = (e) => {
-        let value = e.target.value
+    handleOptionChange = (e: any) => {
+        let value: 'Calculator' | 'StringComparator' | 'ExpressionsInterpreter' = e.target.value
         this.setState({
-            interpreter: new this.classes[value.toString()](),
+            interpreter: new this.classes[value](),
             selectedOption: value,
             result: 'null',
             string: '',
