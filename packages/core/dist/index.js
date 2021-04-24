@@ -18,7 +18,7 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ExpressionsInterpreter = exports.ExpressionsParser = exports.StringComparator = exports.StringComparatorParser = exports.Calculator = exports.CalculatorParser = exports.SimpleInterpreter = void 0;
+exports.ExpressionsInterpreter = exports.ExpressionsParser = exports.StringComparator = exports.StringComparatorParser = exports.Calculator = exports.CalculatorParser = exports.SimpleInterpreter = exports.Token = void 0;
 var NUM = 'NUM';
 var PLUS = 'PLUS';
 var MINUS = 'MINUS';
@@ -46,6 +46,7 @@ var Token = /** @class */ (function () {
     };
     return Token;
 }());
+exports.Token = Token;
 var SimpleInterpreter = /** @class */ (function () {
     function SimpleInterpreter(text) {
         this.lexer = new Lexer(text);
@@ -115,8 +116,8 @@ var Lexer = /** @class */ (function () {
         this.position = 0;
         this.currentChar = this.text[this.position];
     }
-    Lexer.prototype.error = function (char) {
-        throw new Error("Invalid character \"" + char + "\" at position " + this.position);
+    Lexer.prototype.error = function () {
+        throw new Error("Invalid character \"" + this.currentChar + "\" at position " + this.position);
     };
     Lexer.prototype.advance = function () {
         this.position++;
@@ -267,9 +268,8 @@ var Node = /** @class */ (function () {
 var BinOpNode = /** @class */ (function (_super) {
     __extends(BinOpNode, _super);
     function BinOpNode(left, op, right) {
-        var _this = this;
+        var _this = _super.call(this, op.token) || this;
         _this.left = left;
-        _this.token = op;
         _this.op = op;
         _this.right = right;
         return _this;
@@ -315,13 +315,16 @@ var MathNode = /** @class */ (function () {
     };
     return MathNode;
 }());
-var Num = /** @class */ (function () {
-    function Num(token) {
-        this.token = token;
-        this.value = token.value;
+var NumNode = /** @class */ (function (_super) {
+    __extends(NumNode, _super);
+    function NumNode(token) {
+        var _this = this;
+        _this.token = token;
+        _this.value = token.value;
+        return _this;
     }
-    return Num;
-}());
+    return NumNode;
+}(Node));
 var Chars = /** @class */ (function () {
     function Chars(token) {
         this.token = token;
@@ -341,16 +344,18 @@ var CalculatorParser = /** @class */ (function () {
     function CalculatorParser(text) {
         this.lexer = new Lexer(text);
         this.currentToken = this.lexer.getNextToken();
+        this.tokenList = [this.currentToken];
     }
-    CalculatorParser.prototype.error = function (char) {
-        this.lexer.error(char);
+    CalculatorParser.prototype.error = function () {
+        this.lexer.error();
     };
     CalculatorParser.prototype.eat = function (tokenType) {
         if (this.currentToken.type === tokenType) {
             this.currentToken = this.lexer.getNextToken();
+            this.tokenList.push(this.currentToken);
         }
         else {
-            this.error(this.currentToken.toString());
+            this.error();
         }
     };
     CalculatorParser.prototype.expr = function () {
@@ -393,7 +398,7 @@ var CalculatorParser = /** @class */ (function () {
         }
         else if (token.type === NUM) {
             this.eat(NUM);
-            return new Num(token);
+            return new NumNode(token);
         }
         else if (token.type === LPAREN) {
             this.eat(LPAREN);
@@ -436,7 +441,7 @@ var Calculator = /** @class */ (function () {
         }
         this.parser.error(node.toString());
     };
-    Calculator.prototype.visitNum = function (node) {
+    Calculator.prototype.visitNumNode = function (node) {
         return node.value;
     };
     Calculator.prototype.visitUnaryOp = function (node) {
@@ -461,16 +466,18 @@ var StringComparatorParser = /** @class */ (function () {
     function StringComparatorParser(text) {
         this.lexer = new Lexer(text);
         this.currentToken = this.lexer.getNextToken();
+        this.tokenList = [this.currentToken];
     }
-    StringComparatorParser.prototype.error = function () {
-        this.lexer.error();
+    StringComparatorParser.prototype.error = function (char) {
+        this.lexer.error(char);
     };
     StringComparatorParser.prototype.eat = function (tokenType) {
         if (this.currentToken.type === tokenType) {
             this.currentToken = this.lexer.getNextToken();
+            this.tokenList.push(this.currentToken);
         }
         else {
-            this.error();
+            this.error(this.currentToken.toString());
         }
     };
     StringComparatorParser.prototype.expr = function () {
@@ -590,6 +597,7 @@ var ExpressionsParser = /** @class */ (function () {
     function ExpressionsParser(text) {
         this.lexer = new Lexer(text);
         this.currentToken = this.lexer.getNextToken();
+        this.tokenList = [this.currentToken];
     }
     ExpressionsParser.prototype.error = function () {
         this.lexer.error();
@@ -597,17 +605,11 @@ var ExpressionsParser = /** @class */ (function () {
     ExpressionsParser.prototype.eat = function (tokenType) {
         if (this.currentToken.type === tokenType) {
             this.currentToken = this.lexer.getNextToken();
+            this.tokenList.push(this.currentToken);
         }
         else {
             this.error();
         }
-    };
-    ExpressionsParser.prototype.parse = function () {
-        var node = this.expr();
-        if (this.currentToken.type !== EOF) {
-            this.error();
-        }
-        return node;
     };
     ExpressionsParser.prototype.expr = function () {
         var node = this.comparison();
@@ -689,7 +691,7 @@ var ExpressionsParser = /** @class */ (function () {
         }
         else if (token.type === NUM) {
             this.eat(NUM);
-            return new Num(token);
+            return new NumNode(token);
         }
         else if (token.type === CHARS) {
             this.eat(CHARS);
@@ -702,6 +704,13 @@ var ExpressionsParser = /** @class */ (function () {
             return node;
         }
         this.error();
+    };
+    ExpressionsParser.prototype.parse = function () {
+        var node = this.expr();
+        if (this.currentToken.type !== EOF) {
+            this.error();
+        }
+        return node;
     };
     return ExpressionsParser;
 }());
@@ -783,7 +792,7 @@ var ExpressionsInterpreter = /** @class */ (function () {
     ExpressionsInterpreter.prototype.visitChars = function (node) {
         return node.token.type === CHARS ? node.value : this.error();
     };
-    ExpressionsInterpreter.prototype.visitNum = function (node) {
+    ExpressionsInterpreter.prototype.visitNumNode = function (node) {
         return node.token.type === NUM ? node.value : this.error();
     };
     ExpressionsInterpreter.prototype.eval = function (text) {

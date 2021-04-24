@@ -74,17 +74,32 @@ const CHARS = 'CHARS'
 const AND = 'AND'
 const OR = 'OR'
 
-class Token<T extends TokenType> {
-    constructor(public type: T, public value: any) {
-    }
+export interface Parser {
+    lexer: Lexer
+    currentToken: Token<TokenType>
+    tokenList: Token<TokenType>[]
+    parse(): Node<TokenType>
+} 
+
+export interface Interpreter {
+    parser?: Parser
+} 
+
+export class Token<T extends TokenType> {
+    constructor(public type: T, public value: any) {}
 
     toString() {
         return `Token(${this.type}, ${this.value})`
     }
 }
 
-export class SimpleInterpreter {
-    constructor(text) {
+export class SimpleInterpreter implements Interpreter {
+    
+    lexer: Lexer
+    parser?: Parser
+    currentToken: Token<TokenType>
+
+    constructor(text: string) {
         this.lexer = new Lexer(text)
         this.currentToken = this.lexer.getNextToken()
     }
@@ -93,7 +108,7 @@ export class SimpleInterpreter {
         throw new Error(`Invalid syntax`)
     }
 
-    eat(tokenType) {
+    eat(tokenType: TokenType) {
         if (this.currentToken.type === tokenType){
             this.currentToken = this.lexer.getNextToken()
         }
@@ -151,9 +166,9 @@ export class SimpleInterpreter {
 }
 
 class Lexer {
+    text: string
     position: number
     currentChar: string | null
-    text: string
     
     constructor(text: string) {        
         this.text = text
@@ -161,8 +176,8 @@ class Lexer {
         this.currentChar = this.text[this.position]
     }
 
-    error(char: string) {
-        throw new Error(`Invalid character "${char}" at position ${this.position}`)
+    error(): void {
+        throw new Error(`Invalid character "${this.currentChar}" at position ${this.position}`)
     }
 
     advance(): void {
@@ -211,7 +226,7 @@ class Lexer {
         return peekPos > this.text.length - 1 ? null : this.text[peekPos]
     }
 
-    getNextToken(): Token<unknown, unknown> {
+    getNextToken(): Token<TokenType> {
 
         while (this.currentChar != null) {
 
@@ -315,12 +330,9 @@ class Node<T extends TokenType> {
     constructor(public token: Token<T>){}
 }
 
-class BinOpNode extends Node<'OR'> {
-    constructor(left, op, right) {
-        this.left = left
-        this.token = op
-        this.op = op
-        this.right = right
+class BinOpNode extends Node<'OR' | 'AND'> {
+    constructor(public left: Node<TokenType>, public op: Node<TokenType>, public right:Node<TokenType>) {
+        super(op.token)
     }
 
     toString() {
@@ -367,7 +379,7 @@ class MathNode {
     }
 }
 
-class Num {
+class NumNode extends Node<'NUM'> {
     constructor(token) {
         this.token = token
         this.value = token.value
@@ -389,29 +401,32 @@ class UnaryOp {
     }
 }
 
-export class CalculatorParser {
+export class CalculatorParser implements Parser {
     lexer: Lexer
     currentToken: Token<TokenType>
+    tokenList: Token<TokenType>[]
 
     constructor(text: string) {
         this.lexer = new Lexer(text)
         this.currentToken = this.lexer.getNextToken()
+        this.tokenList = [this.currentToken]
     }
 
-    error(char: string) {
-        this.lexer.error(char)
+    error(): void {
+        this.lexer.error()
     }
 
-    eat(tokenType: TokenType) {
+    eat(tokenType: TokenType): void {
         if (this.currentToken.type === tokenType){
             this.currentToken = this.lexer.getNextToken()
+            this.tokenList.push(this.currentToken)
         }
         else{
-            this.error(this.currentToken.toString())
+            this.error()
         }
     }
 
-    expr() {
+    expr(): Node<TokenType> {
         let node = this.term()
         while ([PLUS, MINUS].includes(this.currentToken.type)) {
             let token = this.currentToken
@@ -426,7 +441,7 @@ export class CalculatorParser {
         return node
     }
 
-    term() {
+    term(): Node<TokenType> {
         let node = this.factor()
         while ([MULT, DIV].includes(this.currentToken.type)) {
             let token = this.currentToken
@@ -441,7 +456,7 @@ export class CalculatorParser {
         return node
     }
 
-    factor() {
+    factor(): Node<TokenType> {
         let token = this.currentToken
         if (token.type === PLUS) {
             this.eat(PLUS)
@@ -453,7 +468,7 @@ export class CalculatorParser {
         }
         else if (token.type === NUM) {
             this.eat(NUM)
-            return new Num(token)
+            return new NumNode(token)
         }
         else if (token.type === LPAREN) {
             this.eat(LPAREN)
@@ -464,15 +479,15 @@ export class CalculatorParser {
         this.error(this.currentToken.toString())
     }
 
-    parse() {
+    parse(): Node<TokenType> {
         let node = this.expr()
         return this.currentToken.type === EOF ? node : this.error(this.currentToken.toString())
     }
 }
 
-export class Calculator {
+export class Calculator implements Interpreter {
 
-    parser: CalculatorParser
+    parser?: CalculatorParser
 
     visit(node) {
         const methodName = `visit${node.constructor.name}`;
@@ -500,7 +515,7 @@ export class Calculator {
         this.parser.error(node.toString())
     }
 
-    visitNum(node) {
+    visitNumNode(node) {
         return node.value
     }
 
@@ -515,29 +530,35 @@ export class Calculator {
         this.parser.error(node.toString())
     }
 
-    eval(text) {
+    eval(text: string) {
         this.parser = new CalculatorParser(text)
         let tree = this.parser.parse()
         return this.visit(tree)
     }
 }
 
-export class StringComparatorParser {
-    constructor(text) {
+export class StringComparatorParser implements Parser {
+    lexer: Lexer
+    currentToken: Token<TokenType>
+    tokenList: Token<TokenType>[]
+
+    constructor(text: string) {
         this.lexer = new Lexer(text)
         this.currentToken = this.lexer.getNextToken()
+        this.tokenList = [this.currentToken]
     }
 
-    error() {
-        this.lexer.error()
+    error(char: string) {
+        this.lexer.error(char)
     }
 
-    eat(tokenType) {
+    eat(tokenType: TokenType) {
         if (this.currentToken.type === tokenType){
             this.currentToken = this.lexer.getNextToken()
+            this.tokenList.push(this.currentToken)
         }
         else{
-            this.error()
+            this.error(this.currentToken.toString())
         }
     }
 
@@ -598,14 +619,16 @@ export class StringComparatorParser {
         this.error()
     }
 
-    parse() {
+    parse(): Node<TokenType> {
         let node = this.expr()
         return this.currentToken.type === EOF ? node : this.error()
     }
 
 }
 
-export class StringComparator {
+export class StringComparator implements Interpreter {
+
+    parser?: Parser
 
     error(){
         this.parser.error()
@@ -653,38 +676,36 @@ export class StringComparator {
         return node.value
     }
 
-    eval(text) {
+    eval(text: string) {
         this.parser = new StringComparatorParser(text)
         let tree = this.parser.parse()
         return this.visit(tree)
     }
 }
 
-export class ExpressionsParser {
-    constructor(text) {
+export class ExpressionsParser implements Parser {
+    lexer: Lexer
+    currentToken: Token<TokenType>
+    tokenList: Token<TokenType>[]
+
+    constructor(text: string) {
         this.lexer = new Lexer(text)
         this.currentToken = this.lexer.getNextToken()
+        this.tokenList = [this.currentToken]
     }
 
     error() {
         this.lexer.error()
     }
 
-    eat(tokenType) {
+    eat(tokenType: TokenType) {
         if (this.currentToken.type === tokenType){
             this.currentToken = this.lexer.getNextToken()
+            this.tokenList.push(this.currentToken)
         }
         else{
             this.error()
         }
-    }
-
-    parse(){
-        let node = this.expr()
-        if(this.currentToken.type !== EOF) {
-            this.error()
-        }
-        return node
     }
     
     expr(){
@@ -771,7 +792,7 @@ export class ExpressionsParser {
         }
         else if (token.type === NUM) {
             this.eat(NUM)
-            return new Num(token)
+            return new NumNode(token)
         }
         else if (token.type === CHARS) {
             this.eat(CHARS)
@@ -786,9 +807,18 @@ export class ExpressionsParser {
         this.error()
     }
 
+    parse(): Node<TokenType> {
+        let node = this.expr()
+        if(this.currentToken.type !== EOF) {
+            this.error()
+        }
+        return node
+    }
 }
 
-export class ExpressionsInterpreter {
+export class ExpressionsInterpreter implements Interpreter {
+
+    parser?: ExpressionsParser 
 
     visit(node) {
         const methodName = `visit${node.constructor.name}`;
@@ -872,11 +902,11 @@ export class ExpressionsInterpreter {
         return node.token.type === CHARS ? node.value : this.error()
     }
 
-    visitNum(node) {
+    visitNumNode(node) {
         return node.token.type === NUM ? node.value : this.error()
     }
 
-    eval(text) {
+    eval(text: string) {
         this.parser = new ExpressionsParser(text)
         let tree = this.parser.parse()
         let result = this.visit(tree)
