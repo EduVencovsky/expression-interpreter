@@ -19,6 +19,7 @@ import {
   TextField,
   Typography,
 } from "@material-ui/core";
+import packageJson from '../package.json';
 
 const classes = {
   Calculator: new Calculator(),
@@ -57,11 +58,11 @@ const App = () => {
   );
 
   const interpret = () => {
-    let result = "";
+    let result: any = "";
     const interpreter = classes[input.option];
 
     try {
-      result = interpreter.eval(input.value);
+      result = interpreter.eval(input.value) as any;
     } catch (error) {
       result = error;
     }
@@ -89,10 +90,10 @@ const App = () => {
       <header className="App-header">
         <Typography variant="h1">{interpreterResult.result}</Typography>
         <Paper>
-          <Box>
+          <Box mt={1}>
             <Box>
               <TextField
-              variant="outlined"
+                variant="outlined"
                 value={input.value}
                 onChange={(e) =>
                   setInput((prev) => ({ ...prev, value: e.target.value }))
@@ -142,6 +143,9 @@ const App = () => {
           ))}
         </Box>
       </header>
+      <Box position="absolute" bottom={0} right={0}>
+        <Typography style={{ color: "white" }}>{`version ${packageJson.version}`}</Typography>
+      </Box>
     </div>
   );
 };
