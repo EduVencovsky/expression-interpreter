@@ -1,6 +1,6 @@
 "use strict";
 // TO BETTER UNDERSTAND HOW IT WORKS
-// http://www.craftinginterpreters.com/parsing-expressions.html 
+// http://www.craftinginterpreters.com/parsing-expressions.html
 // https://ruslanspivak.com/lsbasi-part1/
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = function (d, b) {
@@ -19,23 +19,23 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ExpressionsInterpreter = exports.ExpressionsParser = exports.StringComparator = exports.StringComparatorParser = exports.Calculator = exports.CalculatorParser = exports.SimpleInterpreter = exports.Token = void 0;
-var NUM = 'NUM';
-var PLUS = 'PLUS';
-var MINUS = 'MINUS';
-var EOF = 'EOF';
-var MULT = 'MULT';
-var DIV = 'DIV';
-var LPAREN = 'LPAREN';
-var RPAREN = 'RPAREN';
-var DIF = 'DIF';
-var BIG = 'BIG';
-var BIGEQ = 'BIGEQ';
-var SML = 'SML';
-var SMLEQ = 'SMLEQ';
-var EQ = 'EQ';
-var CHARS = 'CHARS';
-var AND = 'AND';
-var OR = 'OR';
+var NUM = "NUM";
+var PLUS = "PLUS";
+var MINUS = "MINUS";
+var EOF = "EOF";
+var MULT = "MULT";
+var DIV = "DIV";
+var LPAREN = "LPAREN";
+var RPAREN = "RPAREN";
+var DIF = "DIF";
+var BIG = "BIG";
+var BIGEQ = "BIGEQ";
+var SML = "SML";
+var SMLEQ = "SMLEQ";
+var EQ = "EQ";
+var CHARS = "CHARS";
+var AND = "AND";
+var OR = "OR";
 var Token = /** @class */ (function () {
     function Token(type, value) {
         this.type = type;
@@ -121,21 +121,24 @@ var Lexer = /** @class */ (function () {
     };
     Lexer.prototype.advance = function () {
         this.position++;
-        this.currentChar = this.position > this.text.length - 1 ? null : this.text[this.position];
+        this.currentChar =
+            this.position > this.text.length - 1 ? null : this.text[this.position];
     };
     Lexer.prototype.skipWhiteSpace = function () {
         while (this.currentChar != null && /\s/.test(this.currentChar))
             this.advance();
     };
     Lexer.prototype.num = function () {
-        var result = '';
+        var result = "";
         var havePoint = false;
         while (this.currentChar != null && !/\s/.test(this.currentChar)) {
             if (!isNaN(this.currentChar)) {
                 result += this.currentChar;
                 this.advance();
             }
-            else if (!havePoint && this.currentChar === '.' && !isNaN(this.peek())) {
+            else if (!havePoint &&
+                this.currentChar === "." &&
+                !isNaN(this.peek())) {
                 result += this.currentChar;
                 havePoint = true;
                 this.advance();
@@ -148,7 +151,7 @@ var Lexer = /** @class */ (function () {
     };
     Lexer.prototype.chars = function (quotes) {
         if (quotes === void 0) { quotes = '"'; }
-        var result = '';
+        var result = "";
         this.advance();
         while (this.currentChar != null && this.currentChar !== quotes) {
             result += this.currentChar;
@@ -177,80 +180,80 @@ var Lexer = /** @class */ (function () {
                 token = new Token(NUM, this.num());
                 return token;
             }
-            else if (this.currentChar === '+') {
+            else if (this.currentChar === "+") {
                 this.advance();
-                token = new Token(PLUS, '+');
+                token = new Token(PLUS, "+");
                 return token;
             }
-            else if (this.currentChar === '-') {
+            else if (this.currentChar === "-") {
                 this.advance();
-                token = new Token(MINUS, '-');
+                token = new Token(MINUS, "-");
                 return token;
             }
-            else if (this.currentChar === '*') {
+            else if (this.currentChar === "*") {
                 this.advance();
-                token = new Token(MULT, '*');
+                token = new Token(MULT, "*");
                 return token;
             }
-            else if (this.currentChar === '/') {
+            else if (this.currentChar === "/") {
                 this.advance();
-                token = new Token(DIV, '/');
+                token = new Token(DIV, "/");
                 return token;
             }
-            else if (this.currentChar === '(') {
+            else if (this.currentChar === "(") {
                 this.advance();
-                token = new Token(LPAREN, '(');
+                token = new Token(LPAREN, "(");
                 return token;
             }
-            else if (this.currentChar === ')') {
+            else if (this.currentChar === ")") {
                 this.advance();
-                token = new Token(RPAREN, ')');
+                token = new Token(RPAREN, ")");
                 return token;
             }
-            else if (this.currentChar === '&' && this.peek() === '&') {
+            else if (this.currentChar === "&" && this.peek() === "&") {
                 this.advance();
                 this.advance();
-                token = new Token(AND, '&&');
+                token = new Token(AND, "&&");
                 return token;
             }
-            else if (this.currentChar === '|' && this.peek() === '|') {
+            else if (this.currentChar === "|" && this.peek() === "|") {
                 this.advance();
                 this.advance();
-                token = new Token('OR', '||');
+                token = new Token("OR", "||");
                 return token;
             }
-            else if (this.currentChar === '>') {
+            else if (this.currentChar === ">") {
                 this.advance();
-                if (this.currentChar === '=') {
+                if (this.currentChar === "=") {
                     this.advance();
-                    token = new Token(BIGEQ, '>=');
+                    token = new Token(BIGEQ, ">=");
                 }
                 else {
-                    token = new Token(BIG, '>');
+                    token = new Token(BIG, ">");
                 }
                 return token;
             }
-            else if (this.currentChar === '<') {
+            else if (this.currentChar === "<") {
                 this.advance();
-                if (this.currentChar === '=') {
+                if (this.currentChar === "=") {
                     this.advance();
-                    token = new Token(SMLEQ, '<=');
+                    token = new Token(SMLEQ, "<=");
                 }
                 else {
-                    token = new Token(SML, '<');
+                    token = new Token(SML, "<");
                 }
                 return token;
             }
-            else if (this.currentChar === '=' && this.peek() === '=') {
+            else if (this.currentChar === "=" && this.peek() === "=") {
                 this.advance();
                 this.advance();
-                token = new Token(EQ, '==');
+                token = new Token(EQ, "==");
                 return token;
             }
-            else if (this.currentChar === '!' && this.peek() === '=') {
+            else if (this.currentChar === "!" && this.peek() === "=") {
                 this.advance();
                 this.advance();
-                token = new Token(DIF, '!=');
+                token = new Token(DIF, "!=");
                 return token;
             }
             this.error(this.currentChar);
@@ -260,86 +263,97 @@ var Lexer = /** @class */ (function () {
     return Lexer;
 }());
 var Node = /** @class */ (function () {
-    function Node(token) {
+    function Node(token, type) {
         this.token = token;
+        this.type = type;
     }
     return Node;
 }());
 var BinOpNode = /** @class */ (function (_super) {
     __extends(BinOpNode, _super);
     function BinOpNode(left, op, right) {
-        var _this = _super.call(this, op.token) || this;
+        var _this = _super.call(this, op, "BinOpNode") || this;
         _this.left = left;
         _this.op = op;
         _this.right = right;
         return _this;
     }
     BinOpNode.prototype.toString = function () {
-        return "left " + this.left + " op " + this.left + " right " + this.left;
+        return "left " + this.left + " op " + this.op + " right " + this.right;
     };
     return BinOpNode;
 }(Node));
-var ExpressionNode = /** @class */ (function () {
+var ExpressionNode = /** @class */ (function (_super) {
+    __extends(ExpressionNode, _super);
     function ExpressionNode(left, op, right) {
-        this.left = left;
-        this.token = op;
-        this.op = op;
-        this.right = right;
+        var _this = _super.call(this, op.token, "ExpressionNode") || this;
+        _this.left = left;
+        _this.op = op;
+        _this.right = right;
+        return _this;
     }
     ExpressionNode.prototype.toString = function () {
-        return "left " + this.left + " op " + this.left + " right " + this.left;
+        return "left " + this.left + " op " + this.op + " right " + this.right;
     };
     return ExpressionNode;
-}());
-var ComparisonNode = /** @class */ (function () {
+}(Node));
+var ComparisonNode = /** @class */ (function (_super) {
+    __extends(ComparisonNode, _super);
     function ComparisonNode(left, op, right) {
-        this.left = left;
-        this.token = op;
-        this.op = op;
-        this.right = right;
+        var _this = _super.call(this, op.token, "ComparisonNode") || this;
+        _this.left = left;
+        _this.op = op;
+        _this.right = right;
+        return _this;
     }
     ComparisonNode.prototype.toString = function () {
-        return "left " + this.left + " op " + this.left + " right " + this.left;
+        return "left " + this.left + " op " + this.op + " right " + this.right;
     };
     return ComparisonNode;
-}());
-var MathNode = /** @class */ (function () {
+}(Node));
+var MathNode = /** @class */ (function (_super) {
+    __extends(MathNode, _super);
     function MathNode(left, op, right) {
-        this.left = left;
-        this.token = op;
-        this.op = op;
-        this.right = right;
+        var _this = _super.call(this, op.token, "MathNode") || this;
+        _this.left = left;
+        _this.op = op;
+        _this.right = right;
+        return _this;
     }
     MathNode.prototype.toString = function () {
-        return "left " + this.left + " op " + this.left + " right " + this.left;
+        return "left " + this.left + " op " + this.op + " right " + this.right;
     };
     return MathNode;
-}());
+}(Node));
 var NumNode = /** @class */ (function (_super) {
     __extends(NumNode, _super);
     function NumNode(token) {
-        var _this = this;
+        var _this = _super.call(this, token, "NumNode") || this;
         _this.token = token;
-        _this.value = token.value;
         return _this;
     }
     return NumNode;
 }(Node));
-var Chars = /** @class */ (function () {
-    function Chars(token) {
-        this.token = token;
-        this.value = token.value;
+var CharsNode = /** @class */ (function (_super) {
+    __extends(CharsNode, _super);
+    function CharsNode(token) {
+        var _this = _super.call(this, token, "CharsNode") || this;
+        _this.token = token;
+        return _this;
     }
-    return Chars;
-}());
-var UnaryOp = /** @class */ (function () {
-    function UnaryOp(op, expr) {
-        this.token = op;
-        this.op = op;
-        this.expr = expr;
+    return CharsNode;
+}(Node));
+var UnaryOpNode = /** @class */ (function (_super) {
+    __extends(UnaryOpNode, _super);
+    function UnaryOpNode(op, expr) {
+        var _this = _super.call(this, op, "UnaryOpNode") || this;
+        _this.token = op;
+        _this.op = op;
+        _this.expr = expr;
+        return _this;
     }
-    return UnaryOp;
-}());
+    return UnaryOpNode;
+}(Node));
 var CalculatorParser = /** @class */ (function () {
     function CalculatorParser(text) {
         this.lexer = new Lexer(text);
@@ -390,11 +404,11 @@ var CalculatorParser = /** @class */ (function () {
         var token = this.currentToken;
         if (token.type === PLUS) {
             this.eat(PLUS);
-            return new UnaryOp(token, this.factor());
+            return new UnaryOpNode(token, this.factor());
         }
         else if (token.type === MINUS) {
             this.eat(MINUS);
-            return new UnaryOp(token, this.factor());
+            return new UnaryOpNode(token, this.factor());
         }
         else if (token.type === NUM) {
             this.eat(NUM);
@@ -410,7 +424,9 @@ var CalculatorParser = /** @class */ (function () {
     };
     CalculatorParser.prototype.parse = function () {
         var node = this.expr();
-        return this.currentToken.type === EOF ? node : this.error(this.currentToken.toString());
+        return this.currentToken.type === EOF
+            ? node
+            : this.error(this.currentToken.toString());
     };
     return CalculatorParser;
 }());
@@ -419,8 +435,17 @@ var Calculator = /** @class */ (function () {
     function Calculator() {
     }
     Calculator.prototype.visit = function (node) {
-        var methodName = "visit" + node.constructor.name;
-        var visitor = this[methodName] || this.genericVisit;
+        var visitor = this.genericVisit;
+        console.log('node', node);
+        if (node.type === "NumNode") {
+            visitor = this.visitNumNode;
+        }
+        else if (node.type === "UnaryOpNode") {
+            visitor = this.visitUnaryOpNode;
+        }
+        else if (node.type === "BinOpNode") {
+            visitor = this.visitBinOpNode;
+        }
         return visitor.call(this, node);
     };
     Calculator.prototype.genericVisit = function (node) {
@@ -442,9 +467,9 @@ var Calculator = /** @class */ (function () {
         this.parser.error(node.toString());
     };
     Calculator.prototype.visitNumNode = function (node) {
-        return node.value;
+        return node.token.value;
     };
-    Calculator.prototype.visitUnaryOp = function (node) {
+    Calculator.prototype.visitUnaryOpNode = function (node) {
         var opType = node.op.type;
         if (opType === PLUS) {
             return +this.visit(node.expr);
@@ -524,7 +549,7 @@ var StringComparatorParser = /** @class */ (function () {
         var token = this.currentToken;
         if (token.type === CHARS) {
             this.eat(CHARS);
-            return new Chars(token);
+            return new CharsNode(token);
         }
         else if (token.type === LPAREN) {
             this.eat(LPAREN);
@@ -548,8 +573,13 @@ var StringComparator = /** @class */ (function () {
         this.parser.error();
     };
     StringComparator.prototype.visit = function (node) {
-        var methodName = "visit" + node.constructor.name;
-        var visitor = this[methodName] || this.genericVisit;
+        var visitor = this.genericVisit;
+        if (node.type === "CharsNode") {
+            visitor = this.visitCharsNode;
+        }
+        else if (node.type === "BinOpNode") {
+            visitor = this.visitBinOpNode;
+        }
         return visitor.call(this, node);
     };
     StringComparator.prototype.genericVisit = function (node) {
@@ -582,8 +612,8 @@ var StringComparator = /** @class */ (function () {
         }
         this.error();
     };
-    StringComparator.prototype.visitChars = function (node) {
-        return node.value;
+    StringComparator.prototype.visitCharsNode = function (node) {
+        return node.token.value;
     };
     StringComparator.prototype.eval = function (text) {
         this.parser = new StringComparatorParser(text);
@@ -683,11 +713,11 @@ var ExpressionsParser = /** @class */ (function () {
         var token = this.currentToken;
         if (token.type === PLUS) {
             this.eat(PLUS);
-            return new UnaryOp(token, this.unary());
+            return new UnaryOpNode(token, this.unary());
         }
         else if (token.type === MINUS) {
             this.eat(MINUS);
-            return new UnaryOp(token, this.unary());
+            return new UnaryOpNode(token, this.unary());
         }
         else if (token.type === NUM) {
             this.eat(NUM);
@@ -695,7 +725,7 @@ var ExpressionsParser = /** @class */ (function () {
         }
         else if (token.type === CHARS) {
             this.eat(CHARS);
-            return new Chars(token);
+            return new CharsNode(token);
         }
         else if (token.type === LPAREN) {
             this.eat(LPAREN);
@@ -719,12 +749,29 @@ var ExpressionsInterpreter = /** @class */ (function () {
     function ExpressionsInterpreter() {
     }
     ExpressionsInterpreter.prototype.visit = function (node) {
-        var methodName = "visit" + node.constructor.name;
-        var visitor = this[methodName] || this.genericVisit;
+        var visitor = this.genericVisit;
+        if (node.type === "ExpressionNode") {
+            visitor = this.visitExpressionNode;
+        }
+        else if (node.type === "ComparisonNode") {
+            visitor = this.visitComparisonNode;
+        }
+        else if (node.type === "MathNode") {
+            visitor = this.visitMathNode;
+        }
+        else if (node.type === "NumNode") {
+            visitor = this.visitNumNode;
+        }
+        else if (node.type === "CharsNode") {
+            visitor = this.visitCharsNode;
+        }
+        else if (node.type === "UnaryOpNode") {
+            visitor = this.visitUnaryOpNode;
+        }
         return visitor.call(this, node);
     };
     ExpressionsInterpreter.prototype.genericVisit = function (node) {
-        throw new Error("No " + node.constructor.name + " method");
+        throw new Error("No " + node.constructor.name + " method " + JSON.stringify(node));
     };
     ExpressionsInterpreter.prototype.error = function () {
         throw Error("Interpretation Error");
@@ -732,7 +779,7 @@ var ExpressionsInterpreter = /** @class */ (function () {
     ExpressionsInterpreter.prototype.visitExpressionNode = function (node) {
         var leftNode = this.visit(node.left);
         var rightNode = this.visit(node.right);
-        if (typeof leftNode !== 'boolean' || typeof rightNode !== 'boolean') {
+        if (typeof leftNode !== "boolean" || typeof rightNode !== "boolean") {
             this.error();
         }
         if (node.op.type === AND) {
@@ -779,7 +826,7 @@ var ExpressionsInterpreter = /** @class */ (function () {
         }
         this.error();
     };
-    ExpressionsInterpreter.prototype.visitUnaryOp = function (node) {
+    ExpressionsInterpreter.prototype.visitUnaryOpNode = function (node) {
         var opType = node.op.type;
         if (opType === PLUS) {
             return +this.visit(node.expr);
@@ -789,17 +836,17 @@ var ExpressionsInterpreter = /** @class */ (function () {
         }
         this.parser.error();
     };
-    ExpressionsInterpreter.prototype.visitChars = function (node) {
-        return node.token.type === CHARS ? node.value : this.error();
+    ExpressionsInterpreter.prototype.visitCharsNode = function (node) {
+        return node.token.type === CHARS ? node.token.value : this.error();
     };
     ExpressionsInterpreter.prototype.visitNumNode = function (node) {
-        return node.token.type === NUM ? node.value : this.error();
+        return node.token.type === NUM ? node.token.value : this.error();
     };
     ExpressionsInterpreter.prototype.eval = function (text) {
         this.parser = new ExpressionsParser(text);
         var tree = this.parser.parse();
         var result = this.visit(tree);
-        return typeof result === 'boolean' ? result : this.error();
+        return typeof result === "boolean" ? result : this.error();
     };
     return ExpressionsInterpreter;
 }());

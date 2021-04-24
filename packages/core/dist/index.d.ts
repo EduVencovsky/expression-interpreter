@@ -1,12 +1,13 @@
-export declare type TokenType = 'NUM' | 'PLUS' | 'MINUS' | 'EOF' | 'MULT' | 'DIV' | 'LPAREN' | 'RPAREN' | 'DIF' | 'BIG' | 'BIGEQ' | 'SML' | 'SMLEQ' | 'EQ' | 'CHARS' | 'AND' | 'OR';
+export declare type TokenType = "NUM" | "PLUS" | "MINUS" | "EOF" | "MULT" | "DIV" | "LPAREN" | "RPAREN" | "DIF" | "BIG" | "BIGEQ" | "SML" | "SMLEQ" | "EQ" | "CHARS" | "AND" | "OR";
 export interface Parser {
     lexer: Lexer;
     currentToken: Token<TokenType>;
     tokenList: Token<TokenType>[];
-    parse(): Node<TokenType>;
+    parse(): Node;
 }
 export interface Interpreter {
     parser?: Parser;
+    eval(text: string): any;
 }
 export declare class Token<T extends TokenType> {
     type: T;
@@ -38,10 +39,12 @@ declare class Lexer {
     peek(count?: number): string | null;
     getNextToken(): Token<TokenType>;
 }
-declare class Node<T extends TokenType> {
-    token: Token<T>;
-    constructor(token: Token<T>);
+declare class Node {
+    token: Token<TokenType>;
+    type: NodeType;
+    constructor(token: Token<TokenType>, type: NodeType);
 }
+declare type NodeType = "BinOpNode" | "ExpressionNode" | "ComparisonNode" | "MathNode" | "NumNode" | "CharsNode" | "UnaryOpNode";
 export declare class CalculatorParser implements Parser {
     lexer: Lexer;
     currentToken: Token<TokenType>;
@@ -56,12 +59,12 @@ export declare class CalculatorParser implements Parser {
 }
 export declare class Calculator implements Interpreter {
     parser?: CalculatorParser;
-    visit(node: any): any;
+    visit(node: Node): void;
     genericVisit(node: any): void;
     visitBinOpNode(node: any): any;
-    visitNumNode(node: any): any;
-    visitUnaryOp(node: any): number | undefined;
-    eval(text: string): any;
+    visitNumNode(node: Node): any;
+    visitUnaryOpNode(node: any): number | undefined;
+    eval(text: string): void;
 }
 export declare class StringComparatorParser implements Parser {
     lexer: Lexer;
@@ -78,11 +81,11 @@ export declare class StringComparatorParser implements Parser {
 export declare class StringComparator implements Interpreter {
     parser?: Parser;
     error(): void;
-    visit(node: any): any;
+    visit(node: Node): void;
     genericVisit(node: any): void;
-    visitBinOpNode(node: any): any;
-    visitChars(node: any): any;
-    eval(text: string): any;
+    visitBinOpNode(node: any): boolean | void;
+    visitCharsNode(node: Node): any;
+    eval(text: string): void;
 }
 export declare class ExpressionsParser implements Parser {
     lexer: Lexer;
@@ -100,15 +103,15 @@ export declare class ExpressionsParser implements Parser {
 }
 export declare class ExpressionsInterpreter implements Interpreter {
     parser?: ExpressionsParser;
-    visit(node: any): any;
+    visit(node: Node): void;
     genericVisit(node: any): void;
     error(): void;
-    visitExpressionNode(node: any): any;
+    visitExpressionNode(node: any): void;
     visitComparisonNode(node: any): boolean | undefined;
     visitMathNode(node: any): any;
-    visitUnaryOp(node: any): number | undefined;
-    visitChars(node: any): any;
-    visitNumNode(node: any): any;
-    eval(text: string): boolean | void;
+    visitUnaryOpNode(node: any): number | undefined;
+    visitCharsNode(node: Node): any;
+    visitNumNode(node: Node): any;
+    eval(text: string): void;
 }
 export {};
